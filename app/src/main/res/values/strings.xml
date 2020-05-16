@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Tic Tac Toy</string>
+    <string name="selector">Opponent: Human/Android</string>
+    <string name="header">Tic Tac Toy</string>
+    <string name="emptyCell">\t</string>
+    <string name="queueSelector">First step: Human/Android</string>
+    <string name="youWin">You win!</string>
+    <string name="androidWin">Android win!</string>
+    <string name="win">win!</string>
+    <string name="draw">It`s draw.</string>
+</resources>

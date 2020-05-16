@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Крестики-нолики</string>
+    <string name="selector">Оппонент: Человек/Андроид</string>
+    <string name="header">Крестики-Нолики</string>
+    <string name="emptyCell">\t</string>
+    <string name="queueSelector">Первый ход: Игрок/Андроид</string>
+    <string name="youWin">Вы выиграли!</string>
+    <string name="androidWin">Андроид выиграл!</string>
+    <string name="win">выиграл!</string>
+    <string name="draw">Ничья.</string>
+</resources>
