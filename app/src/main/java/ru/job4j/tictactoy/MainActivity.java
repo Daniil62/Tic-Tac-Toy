@@ -19,9 +19,10 @@ public class MainActivity extends AppCompatActivity {
     private boolean queue;
     private boolean oppSelect;
     private boolean firstStep;
-    private int[][] field;
-    private int[] combination;
-
+    private int[] field;
+    private Logic logic;
+    private final String X = "X";
+    private final String O = "O";
     @Override
     protected void onPause() {
         super.onPause();
@@ -39,15 +40,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        Button one = findViewById(R.id.button1_1);
-        Button two = findViewById(R.id.button1_2);
-        Button three = findViewById(R.id.button1_3);
-        Button four = findViewById(R.id.button2_1);
-        Button five = findViewById(R.id.button2_2);
-        Button six = findViewById(R.id.button2_3);
-        Button seven = findViewById(R.id.button3_1);
-        Button eight = findViewById(R.id.button3_2);
-        Button nine = findViewById(R.id.button3_3);
+        outState.putIntArray("fieldState", field);
+        Button one = findViewById(field[0]);
+        Button two = findViewById(field[1]);
+        Button three = findViewById(field[2]);
+        Button four = findViewById(field[3]);
+        Button five = findViewById(field[4]);
+        Button six = findViewById(field[5]);
+        Button seven = findViewById(field[6]);
+        Button eight = findViewById(field[7]);
+        Button nine = findViewById(field[8]);
         outState.putString("oneText", one.getText().toString());
         outState.putString("twoText", two.getText().toString());
         outState.putString("threeText", three.getText().toString());
@@ -57,22 +59,25 @@ public class MainActivity extends AppCompatActivity {
         outState.putString("sevenText", seven.getText().toString());
         outState.putString("eightText", eight.getText().toString());
         outState.putString("nineText", nine.getText().toString());
-        outState.getIntArray("combination");
         outState.putBoolean("queue", queue);
         outState.putBoolean("opSelect", oppSelect);
+        outState.putBoolean("logicQueue", logic.getQueue());
+        outState.putStringArrayList("symbols", new ArrayList<String> (logic.getField()));
     }
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        Button one = findViewById(R.id.button1_1);
-        Button two = findViewById(R.id.button1_2);
-        Button three = findViewById(R.id.button1_3);
-        Button four = findViewById(R.id.button2_1);
-        Button five = findViewById(R.id.button2_2);
-        Button six = findViewById(R.id.button2_3);
-        Button seven = findViewById(R.id.button3_1);
-        Button eight = findViewById(R.id.button3_2);
-        Button nine = findViewById(R.id.button3_3);
+        field = savedInstanceState.getIntArray("fieldState");
+        assert field != null;
+        Button one = findViewById(field[0]);
+        Button two = findViewById(field[1]);
+        Button three = findViewById(field[2]);
+        Button four = findViewById(field[3]);
+        Button five = findViewById(field[4]);
+        Button six = findViewById(field[5]);
+        Button seven = findViewById(field[6]);
+        Button eight = findViewById(field[7]);
+        Button nine = findViewById(field[8]);
         one.setText(savedInstanceState.getString("oneText"));
         two.setText(savedInstanceState.getString("twoText"));
         three.setText(savedInstanceState.getString("threeText"));
@@ -82,9 +87,11 @@ public class MainActivity extends AppCompatActivity {
         seven.setText(savedInstanceState.getString("sevenText"));
         eight.setText(savedInstanceState.getString("eightText"));
         nine.setText(savedInstanceState.getString("nineText"));
-        combination = savedInstanceState.getIntArray("combination");
         queue = savedInstanceState.getBoolean("queue");
+        logic.setQueue(savedInstanceState.getBoolean("logicQueue"));
         oppSelect = savedInstanceState.getBoolean("opSelect");
+        List<String> list = savedInstanceState.getStringArrayList("symbols");
+        logic.setField(list);
     }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,6 +118,7 @@ public class MainActivity extends AppCompatActivity {
         seven.setOnClickListener(this::cellMark);
         eight.setOnClickListener(this::cellMark);
         nine.setOnClickListener(this::cellMark);
+        logic = new Logic();
         SharedPreferences preferences = getSharedPreferences(
                 "selector", Context.MODE_PRIVATE);
         boolean oppSelectState = preferences.getBoolean("oppSelector", true);
@@ -120,10 +128,9 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 oppSelect = opponentSelector.isChecked();
                 queuePriority.setEnabled(oppSelect);
-                if (checkCleanField()) {
-                    androidInit();
+                if (oppSelect && queue) {
+                    androidInGame();
                 }
-                androidInGame();
             }
         });
         preferences = getSharedPreferences(
@@ -135,50 +142,45 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 firstStep = queuePriority.isChecked();
-                if (checkCleanField()) {
-                    queue = firstStep;
+                if (logic.checkCleanField() && firstStep) {
+                    logic.setQueue(!logic.getQueue());
                     androidInGame();
                 }
             }
         });
-        this.field = new int[][]{
-                {one.getId(), two.getId(), three.getId()},
-                {four.getId(), five.getId(), six.getId()},
-                {seven.getId(), eight.getId(), nine.getId()}
+        this.field = new int[]{
+                one.getId(), two.getId(), three.getId(),
+                four.getId(), five.getId(), six.getId(),
+                seven.getId(), eight.getId(), nine.getId()
         };
+        loadField();
+    }
+    private void loadField() {
+        Button cell;
+        for (int i = 0; i < field.length; ++i) {
+            cell = findViewById(field[i]);
+            cell.setText(logic.getField().get(i));
+            cell.setId(i);
+            cell.setText(logic.getField().get(i));
+            field[i] = i;
+        }
+        Switch opponentSelector = findViewById(R.id.opponentSelector);
+        Switch queuePriority = findViewById(R.id.queueSelector);
         oppSelect = opponentSelector.isChecked();
         queuePriority.setEnabled(oppSelect);
-        androidInit();
-    }
-    private void androidInit() {
-        Switch queuePriority = findViewById(R.id.queueSelector);
-        if (queuePriority.isChecked()) {
-            queue = true;
+        if (logic.checkCleanField() && firstStep) {
+            logic.setQueue(!logic.getQueue());
             androidInGame();
         }
-        queue = false;
     }
-    private boolean checkCleanField() {
-        boolean result = true;
-        Button button;
-        for (int[] array : field) {
-            for (int id : array) {
-                button = findViewById(id);
-                if (!button.getText().equals("\t")) {
-                    result = false;
-                    break;
-                }
-            }
-        }
-        return result;
-    }
-    private boolean isWin() {
+    public void hasWinner() {
         boolean result = false;
         char symbol;
-        if (checkHorizontal("O") || checkVertical("O")
-                || checkDiagonal("O") || checkHorizontal("X")
-                || checkVertical("X") || checkDiagonal("X")) {
-            if (queue) {
+        boolean winX = logic.isWin(X);
+        boolean winO = logic.isWin(O);
+        if (winX || winO) {
+            paint(logic.getCombination());
+            if (winX) {
                 symbol = 'X';
             } else {
                 symbol = 'O';
@@ -186,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
             String text = "";
             text += symbol;
             if (oppSelect) {
-                if (queue) {
+                if (logic.getQueue()) {
                     text = getString(R.string.youWin);
                 } else {
                     text = getString(R.string.androidWin);
@@ -199,40 +201,26 @@ public class MainActivity extends AppCompatActivity {
                     Toast.LENGTH_SHORT).show();
             result = true;
         }
-        if (!result) {
-            int count = 0;
-            Button button;
-            for (int[] arr : field) {
-                for (int id : arr) {
-                    button = findViewById(id);
-                    if (!button.getText().equals("\t")) {
-                        ++count;
-                    } else {
-                        break;
-                    }
-                }
-                if (count == 9) {
-                    Toast.makeText(this, getString(R.string.draw),
-                            Toast.LENGTH_SHORT).show();
-                    result = true;
-                }
-            }
+        if (!result || !logic.hasFree()) {
+            Toast.makeText(this, getString(R.string.draw),
+                    Toast.LENGTH_SHORT).show();
         }
-        return result;
     }
     private void cellMark(View view) {
-        Button cell = findViewById(view.getId());
-        if (!queue && cell.getText().toString().equals("\t")) {
-            queue = true;
-            cell.setText("X");
-        } else if (queue && cell.getText().toString().equals("\t")) {
-            queue = false;
-            cell.setText("O");
+        int id = view.getId();
+        Button cell = findViewById(id);
+        if (logic.tryMark(id) && !cell.getText().toString().equals(X)
+                && !cell.getText().toString().equals(O)) {
+            cell.setText(logic.getField().get(id));
+            queue = logic.getQueue();
         }
-        if (oppSelect && queue && !isWin()) {
+        boolean winX = logic.isWin(X);
+        boolean winO = logic.isWin(O);
+        if (oppSelect && queue && !(winX || winO)) {
             androidInGame();
         }
-        if (isWin()) {
+        if (winX || winO || !logic.hasFree()) {
+            hasWinner();
             Intent intent = new Intent(this, this.getClass());
             finish();
             this.startActivity(intent);
@@ -242,255 +230,35 @@ public class MainActivity extends AppCompatActivity {
     public void onBackPressed() {
         moveTaskToBack(true);
     }
-    private boolean androidAnalyse(String sequence1, String sequence2, String sequence3) {
+    public boolean androidAction(String symbol) {
         boolean result = false;
-        Button cell;
-        String str;
-        for (int i = 0; i < field[0].length; ++i) {
-            str = "";
-            for (int j = 0; j < field[i].length; ++j) {
-                cell = findViewById(field[i][j]);
-                str += cell.getText().toString();
-                if (str.equals(sequence1)) {
-                    cell = findViewById(field[i][j]);
-                    result = true;
-                    cell.performClick();
-                    break;
-                }
-                if (str.equals(sequence2)) {
-                    cell = findViewById(field[i][--j]);
-                    result = true;
-                    cell.performClick();
-                    break;
-                }
-                if (str.equals(sequence3)) {
-                    cell = findViewById(field[i][j - 2]);
-                    result = true;
-                    cell.performClick();
-                    break;
-                }
-            }
-            if (result) {
-                break;
-            }
-        }
-        if (!result) {
-            for (int i = 0; i < field[0].length; ++i) {
-                str = "";
-                for (int j = 0; j < field[0].length; ++j) {
-                    cell = findViewById(field[j][i]);
-                    str += cell.getText().toString();
-                    if (str.equals(sequence1)) {
-                        cell = findViewById(field[j][i]);
-                        result = true;
-                        cell.performClick();
-                        break;
-                    }
-                    if (str.equals(sequence2)) {
-                        cell = findViewById(field[--j][i]);
-                        result = true;
-                        cell.performClick();
-                        break;
-                    }
-                    if (str.equals(sequence3)) {
-                        cell = findViewById(field[j - 2][i]);
-                        result = true;
-                        cell.performClick();
-                        break;
-                    }
-                }
-                if (result) {
-                    break;
-                }
-            }
-        }
-        if (!result) {
-            str = "";
-            for (int i = 0; i < field[0].length; ++i) {
-                cell = findViewById(field[i][i]);
-                str += cell.getText().toString();
-                if (str.equals(sequence1)) {
-                    cell = findViewById(field[i][i]);
-                    result = true;
-                    cell.performClick();
-                    break;
-                }
-                if (str.equals(sequence2)) {
-                    --i;
-                    cell = findViewById(field[i][i]);
-                    result = true;
-                    cell.performClick();
-                    break;
-                }
-                if (str.equals(sequence3)) {
-                    i -= 2;
-                    cell = findViewById(field[i][i]);
-                    result = true;
-                    cell.performClick();
-                    break;
-                }
-            }
-        }
-        if (!result) {
-            int j = 0;
-            str = "";
-            for (int i = field[0].length - 1; i >= 0; --i) {
-                cell = findViewById(field[j][i]);
-                str += cell.getText().toString();
-                if (str.equals(sequence1)) {
-                    cell = findViewById(field[j][i]);
-                    result = true;
-                    cell.performClick();
-                    break;
-                }
-                if (str.equals(sequence2)) {
-                    ++i;
-                    --j;
-                    cell = findViewById(field[j][i]);
-                    result = true;
-                    cell.performClick();
-                    break;
-                }
-                if (str.equals(sequence3)) {
-                    i += 2;
-                    j -= 2;
-                    cell = findViewById(field[j][i]);
-                    result = true;
-                    cell.performClick();
-                    break;
-                }
-                ++j;
-            }
-        }
-        return result;
-    }
-    private boolean androidAttack() {
-        boolean result = false;
-        String sequence1 = "OO\t";
-        String sequence2 = "O\tO";
-        String sequence3 = "\tOO";
-        if (androidAnalyse(sequence1, sequence2, sequence3)) {
+        Button button;
+        int cell = logic.androidAnalyse(symbol);
+        if (cell != -1) {
+            button = findViewById(cell);
+            button.performClick();
             result = true;
         }
         return result;
     }
-    private boolean androidDefence() {
-        boolean result = false;
-        String sequence1 = "XX\t";
-        String sequence2 = "X\tX";
-        String sequence3 = "\tXX";
-        if (androidAnalyse(sequence1, sequence2, sequence3)) {
-            result = true;
-        }
-        return result;
-    }
-    private void androidInGame() {
+    public void androidInGame() {
         Button cell;
-        boolean result = false;
-        if (oppSelect && queue && !isWin()) {
-            if (!androidAttack()) {
-                if (androidDefence()) {
-                    result = true;
-                }
-                if (!result) {
-                    List<Integer> emptyCells = new ArrayList<>();
-                    for (int[] array : field) {
-                        for (int id : array) {
-                            cell = findViewById(id);
-                            if (cell.getText().equals("\t")) {
-                                emptyCells.add(cell.getId());
-                            }
-                        }
-                    }
-                    int x = (int) (Math.random() * emptyCells.size());
-                    while (!result) {
-                        cell = findViewById(emptyCells.get(x));
-                        cell.performClick();
-                        result = true;
+        if (!androidAction(O)) {
+            if (!androidAction(X) && logic.hasFree()) {
+                List<Integer> freeCells = new ArrayList<>();
+                for (int i = 0; i < field.length; ++i) {
+                    if (logic.getField().get(i).equals("\t")) {
+                        freeCells.add(i);
                     }
                 }
+                cell = findViewById(freeCells.get((int) (Math.random() * freeCells.size())));
+                cell.performClick();
             }
         }
     }
-    private void paint(int[] array) {
-        for (int anArray : array) {
-            Button button = findViewById(anArray);
+    private void paint(List<Integer> array) {
+        for (int index : array) {
+            Button button = findViewById(index);
             button.setTextColor(Color.parseColor("#00EE00"));}
-    }
-    private boolean checkHorizontal(String symbol) {
-        combination = new int[field[0].length];
-        boolean result = false;
-        Button cell;
-        for (int i = 0; i < field[0].length; ++i) {
-            int count = 0;
-            for (int j = 0; j < field[i].length; ++j) {
-                cell = this.findViewById(field[i][j]);
-                if (cell.getText().equals(symbol)) {
-                    ++count;
-                    combination[count - 1] = field[i][j];
-                }
-            }
-            if (count == field[0].length) {
-                paint(combination);
-                result = true;
-                break;
-            }
-        }
-        return result;
-    }
-    private boolean checkVertical(String symbol) {
-        combination = new int[field[0].length];
-        boolean result = false;
-        Button cell;
-        for (int i = 0; i < field[0].length; ++i) {
-            int count = 0;
-            for (int[] aField : field) {
-                cell = this.findViewById(aField[i]);
-                if (cell.getText().equals(symbol)) {
-                    ++count;
-                    combination[count - 1] = aField[i];
-                }
-            }
-            if (count == field[0].length) {
-                paint(combination);
-                result = true;
-                break;
-            }
-        }
-        return result;
-    }
-    private boolean checkDiagonal(String symbol) {
-        combination = new int[field[0].length];
-        boolean result = false;
-        Button cell;
-        int count = 0;
-        for (int i = 0; i < field[0].length; ++i) {
-            cell = this.findViewById(field[i][i]);
-            if (cell.getText().equals(symbol)) {
-                ++count;
-                combination[count - 1] = field[i][i];
-            }
-        }
-        if (count == field[0].length) {
-            result = true;
-            paint(combination);
-        }
-        if (!result) {
-            int j = 0;
-            count = 0;
-            for (int i = field[0].length - 1; i >= 0; --i) {
-                cell = this.findViewById(field[j][i]);
-                if (cell.getText().equals(symbol)) {
-                    ++count;
-                    combination[count - 1] = field[j][i];
-                }
-                j++;
-            }
-            if (count == field[0].length) {
-                result = true;
-                paint(combination);
-            }
-        }
-        return result;
     }
 }
