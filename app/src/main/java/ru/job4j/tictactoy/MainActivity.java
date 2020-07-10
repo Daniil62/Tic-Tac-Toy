@@ -201,7 +201,7 @@ public class MainActivity extends AppCompatActivity {
                     Toast.LENGTH_SHORT).show();
             result = true;
         }
-        if (!result || !logic.hasFree()) {
+        if (!result && !logic.hasFree()) {
             Toast.makeText(this, getString(R.string.draw),
                     Toast.LENGTH_SHORT).show();
         }
@@ -209,10 +209,12 @@ public class MainActivity extends AppCompatActivity {
     private void cellMark(View view) {
         int id = view.getId();
         Button cell = findViewById(id);
-        if (logic.tryMark(id) && !cell.getText().toString().equals(X)
-                && !cell.getText().toString().equals(O)) {
-            cell.setText(logic.getField().get(id));
-            queue = logic.getQueue();
+        if (cell.getText().equals("\t")) {
+            if (logic.tryMark(id) && !cell.getText().toString().equals(X)
+                    && !cell.getText().toString().equals(O)) {
+                cell.setText(logic.getField().get(id));
+                queue = logic.getQueue();
+            }
         }
         boolean winX = logic.isWin(X);
         boolean winO = logic.isWin(O);
